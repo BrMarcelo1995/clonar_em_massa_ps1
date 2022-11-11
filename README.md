@@ -13,7 +13,7 @@ que servirá como espelho para os afetados.
 
 1º Abra o powershell como administrador e conceda permissão para execução de script remoto com o comando "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser"
 
-2º ainda com o powershell como administrador execute o script para instalação das dependências declaradas no script, caso ocorrer problema para importar o módulo do ActiveDirectory recomendo realizar a instalação manual abrindo o painel de configurações do windows, buscar por recursos opcionais e instalar o pacote de ferramenta abaixo:
+2º ainda com o powershell como administrador execute o script para instalação das dependências declaradas no script, caso ocorrer problema para importar o módulo do ActiveDirectory recomendo realizar a instalação manual abrindo o painel de configurações do windows, buscar por recursos opcionais e instalar o pacote de ferramenta, conforme imagem
 ![image](https://user-images.githubusercontent.com/32343597/201237736-f5850b4a-f812-4f02-9035-79f093a4c377.png)
 
 Após isso o ambiente está configurado e pronto para execução do script
