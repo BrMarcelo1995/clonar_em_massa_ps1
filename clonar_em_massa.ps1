@@ -1,12 +1,8 @@
 try {
     #using
-    if (!(Get-Module -Name 'ActiveDirectory')) {
-        Install-Module -Name 'ActiveDirectory' -ErrorAction Stop
-    }
-    
-    if (!(Test-Path 'C:\Program Files\WindowsPowerShell\Modules\ImportExcel')) {
-        Install-Module -Name 'ImportExcel' -ErrorAction Stop
-    }
+
+        #Install-Module -Name 'ActiveDirectory' -ErrorAction Stop
+        #Install-Module -Name 'ImportExcel' -ErrorAction Stop
     
     #main
     
@@ -25,10 +21,6 @@ try {
     $usuarios = Import-Excel -Path $endereco -ErrorAction Stop
     
     $autenticacao = Get-Credential -ErrorAction Stop
-    
-    if ($null -eq ($autenticacao.Password -and $autenticacao.UserName)){
-        throw "Autenticacao nula"
-    }
 
 
     $Office = Get-ADUser $template -Properties "Office" | 
@@ -132,14 +124,12 @@ try {
                 try {
                     Remove-ADGroupMember -Identity $grupoAntigo -Members $usuarioAfetado -Credential $autenticacao -Confirm:$false
                 } catch {
-                    Write-Warning "Nao foi possivel remover o usuario $usuarioAfetado do grupoNovo $grupoAntigo"
-                    $_.Exception.Message
-
+                    Write-Warning "Nao foi possivel remover o usuario $usuarioAfetado do grupoNovo $grupoAntigo porque $($_.Exception.Message)"
                 } 
 
             }
 
-            Write-Host "::Removendo os grupos antigos de(a) $usuarioAfetado"
+            Write-Host "::Removendo os grupos antigos de(a) $usuarioAfetado" -BackgroundColor DarkRed
 
             foreach ($grupoNovo in $gruposTemplate) {
 
@@ -147,13 +137,12 @@ try {
                     Add-ADGroupMember -Identity $grupoNovo -Members $usuarioAfetado -Credential $autenticacao
                 }
                 catch {
-                    write-warning "Nao foi possivel adicionar o usuario $usuarioAfetado no $grupoNovo"
-                    $_.Exception.Message
+                    write-warning "Nao foi possivel adicionar o usuario $usuarioAfetado no $grupoNovo porque $($_.Exception.Message)"
                 }
 
             }
 
-            Write-Host "::Adicionando os novos grupos em $usuarioAfetado`n"
+            Write-Host "::Adicionando os novos grupos em $usuarioAfetado" -BackgroundColor DarkCyan
         }
         catch {
             Write-Host 'Ocorreu uma excecao'
