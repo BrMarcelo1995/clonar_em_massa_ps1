@@ -1,27 +1,27 @@
 try {
-    #dependencias
-    if (!(Get-Module -Name 'ActiveDirectory')) {
-        Install-Module -Name 'ActiveDirectory' -ErrorAction Stop
+    #using
+
+        #Install-Module -Name 'ActiveDirectory' -ErrorAction Stop
+        #Install-Module -Name 'ImportExcel' -ErrorAction Stop
+    
+    #main
+    
+    $endereco = Read-Host "Informe o caminho completo da Planilha"
+    
+    if (!(Test-Path -LiteralPath $endereco)) {
+        throw "Endereco da planilha inexistente"
     }
     
-    if (!(Test-Path 'C:\Program Files\WindowsPowerShell\Modules\ImportExcel')) {
-        Install-Module -Name 'ImportExcel' -ErrorAction Stop
-    }
-    
-    #processamento
-    [String]$endereco = Read-Host "Informe o caminho completo da Planilha"
-    [String]$template = Read-Host "Digite o login de rede do usuario espelho"
+    $template = Read-Host "Digite o login de rede do usuario espelho"
 
     if (($null -eq (get-aduser $template))) {
-        throw "varivel do usuario espelho recebeu um valor nulo"
-    } elseif ($null -eq ($autenticacao.Password -and $autenticacao.UserName)){
-        throw "autenticacao vazia"
-    } elseif (!(Test-Path -LiteralPath $endereco)) {
-        throw "endereco da planilha inexistente"
+        throw "Usuario template nulo ou inexistente, por favor, validar no Active Directory"
     }
 
     $usuarios = Import-Excel -Path $endereco -ErrorAction Stop
-    $autenticacao = Get-Credential
+    
+    $autenticacao = Get-Credential -ErrorAction Stop
+
 
     $Office = Get-ADUser $template -Properties "Office" | 
                 Select-Object -ExpandProperty Office
@@ -35,31 +35,34 @@ try {
                 Select-Object -ExpandProperty ScriptPath
     
 
-    Write-Host "Escritorio: $Office" -ForegroundColor Green
-    Write-Host "Departamento: $Department" -ForegroundColor Green
-    Write-Host "Descricao: $Description" -ForegroundColor Green
-    Write-Host "Empresa: $Company" -ForegroundColor Green
-    Write-Host "Script de Logon: $ScriptPath `n" -ForegroundColor Green
+    Write-Host "#Propriedades do usuario Template que serao Clonadas#" -ForegroundColor Green
+
+    Write-Host "#Escritorio: $Office"
+    Write-Host "#Departamento: $Department"
+    Write-Host "#Descricao: $Description"
+    Write-Host "#Empresa: $Company"
+    Write-Host "#Script de Logon: $ScriptPath `n"
 
     $ddNameEspelho = Get-ADUser $template -Properties "DistinguishedName", "DisplayName" | 
                         Select-Object -Property "DistinguishedName", "DisplayName"
     $ouEspelho = $ddNameEspelho.DistinguishedName -replace "CN=$($ddNameEspelho.DisplayName),", ''
 
-    Write-Host "Unidade Organizacional: $ouEspelho `n" -ForegroundColor Green
+    Write-Host "#Unidade Organizacional: $ouEspelho `n"
 
     $gruposTemplate = Get-ADUser -Identity $template -Properties memberof | 
                         Select-Object -ExpandProperty memberof
 
+    Write-Host "####################################################" -ForegroundColor Green
 
     foreach ($usuarioAfetado in $usuarios.login) {
 
        try {
 
             if ($null -eq $usuarioAfetado) {
-                throw "Usuario Inexistente"
+                throw "Usuario afetado inexistente"
             }
 
-            function Export-Bkp {
+            function Export-BkpUsuarioAfetado {
                 param (
                     [Parameter(Mandatory)]
                     [String]$loginDeRede
@@ -92,10 +95,10 @@ try {
             }
 
             
-                Export-Bkp($usuarioAfetado)
+            Export-BkpUsuarioAfetado($usuarioAfetado)
 
             
-            Write-Host "atualizando os dados do usuario $usuarioAfetado" -ForegroundColor Yellow
+            Write-Host "Atualizando os dados do usuario $usuarioAfetado" -ForegroundColor Yellow
             Write-Host "Atualizando Escritorio para: $Office"
             Set-ADUser $usuarioAfetado -Office $Office
             Write-Host "Atualizando Departamento para: $Department"
@@ -121,13 +124,12 @@ try {
                 try {
                     Remove-ADGroupMember -Identity $grupoAntigo -Members $usuarioAfetado -Credential $autenticacao -Confirm:$false
                 } catch {
-                    write-warning "Nao foi possivel remover o usuario $usuarioAfetado do grupoNovo $grupoAntigo"
-                    $_.Exception.Message
-
+                    Write-Warning "Nao foi possivel remover o usuario $usuarioAfetado do grupoNovo $grupoAntigo porque $($_.Exception.Message)"
                 } 
 
             }
-            Write-Host "Removendo usuario usuarioAfetado dos seus antigos grupos..."
+
+            Write-Host "::Removendo os grupos antigos de(a) $usuarioAfetado" -BackgroundColor DarkRed
 
             foreach ($grupoNovo in $gruposTemplate) {
 
@@ -135,16 +137,15 @@ try {
                     Add-ADGroupMember -Identity $grupoNovo -Members $usuarioAfetado -Credential $autenticacao
                 }
                 catch {
-                    write-warning "Nao foi possivel adicionar o usuario $usuarioAfetado no $grupoNovo"
-                    $_.Exception.Message
+                    write-warning "Nao foi possivel adicionar o usuario $usuarioAfetado no $grupoNovo porque $($_.Exception.Message)"
                 }
 
             }
 
-            Write-Host "Adicionando usuario usuarioAfetado nos grupos do template...`n"
+            Write-Host "::Adicionando os novos grupos em $usuarioAfetado" -BackgroundColor DarkCyan
         }
         catch {
-            Write-Host "Ocorreu uma excecao"
+            Write-Host 'Ocorreu uma excecao'
             Write-Host $_
             Write-Host $_.ScriptStackTrace
         }
@@ -154,7 +155,7 @@ try {
 catch {
     Write-Host 'Ocorreu uma excecao durante a execucao'
     Write-Host $_
-    Write-Host "********************************"
+    Write-Host '********************************'
     Write-Host $_.ScriptStackTrace
 }
 
